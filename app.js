@@ -15,7 +15,7 @@ const FIRST_SHOWN = 1;
 const VIEW_HELP = {
   prediction: "The climb the model would produce if it stopped at this step.",
   confidence: "Every hole shaded by how strongly the model currently leans toward a hold there.",
-  relative: "Holes shaded by how likely each is to be a hold compared with the most likely hold on the entire board right now",
+  relative: "Holes shaded by how likely each is to be a hold compared with the most likely hold on the entire board right now.",
   noisy: "The current noise the model is cleaning up. It starts as pure noise and sharpens into the climb.",
 };
 
