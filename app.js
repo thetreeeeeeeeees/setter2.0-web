@@ -15,9 +15,8 @@ const FIRST_SHOWN = 1;
 const VIEW_HELP = {
   prediction: "The climb the model would produce if it stopped at this step.",
   confidence: "Every hole shaded by how strongly the model currently leans toward a hold there.",
-  relative: "Holes shaded by how likely each is to be a hold compared with the most likely hole right now, " +
-    "so you can see where the model starts leaning before any hold wins. Early leanings often change.",
-  noisy: "The noisy grid the model is cleaning up. It starts as pure noise and sharpens into the climb.",
+  relative: "Holes shaded by how likely each is to be a hold compared with the most likely hold on the entire board right now",
+  noisy: "The current noise the model is cleaning up. It starts as pure noise and sharpens into the climb.",
 };
 
 const $ = (id) => document.getElementById(id);
@@ -311,7 +310,7 @@ async function generate() {
       run.seconds = (performance.now() - started) / 1000;
       run.holds = decode(snapshots[snapshots.length - 1].x0);
       summarize(run.holds);
-      setStatus("Done. Drag the slider or press play to watch the climb form.", 1);
+      setStatus("Done! Drag the slider or press play to watch the climb form.", 1);
       [els.copyLink, els.copyFrames, els.download].forEach((b) => (b.disabled = false));
     }
   } catch (err) {

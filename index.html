@@ -49,7 +49,7 @@
           <span class="label-row"><span>Guidance</span><output id="guidance-out">0.0</output></span>
           <input id="guidance" type="range" min="0" max="4" step="0.5" value="2">
         </label>
-        <p class="hint">Guidance makes climbs follow the grade and angle more strictly, but sometimes can create structural issues (e.g. 3 start holds, no finish, etc).</p>
+        <p class="hint">Guidance makes climbs follow the grade and angle more strictly, but can sometimes create structural issues (e.g. 3 start holds, no finish, etc).</p>
       </details>
 
       <button id="generate" class="primary" type="button" disabled>Loading model…</button>
@@ -83,7 +83,7 @@
 
     <section class="panel details" aria-label="Climb details">
       <h2>Result</h2>
-      <p id="summary" class="summary">Generate a climb to see it here.</p>
+      <p id="summary" class="summary">Generate a climb!</p>
       <div class="detail-actions">
         <button id="copy-link" type="button" disabled>Copy link</button>
         <button id="copy-frames" type="button" disabled>Copy frames</button>
@@ -105,14 +105,14 @@
     <h2 id="how-title">About</h2>
 
     <h3>What is setter2.0?</h3>
-    <p>setter2.0 is a DDIM model trained/tested on a dataset of about 80,000 public Kilter board climbs, all with 2 or more ascents, right now for 700 epochs. 
+    <p>setter2.0 is a DDIM model trained/tested on a dataset of about 80,000 public Kilter Board climbs, all with 2 or more ascents, right now for 700 epochs. 
       The model spatially encodes climbs in a grid format, with each cell containing 5 channels (empty, start, hand, foot, finish). Then, using reverse-step diffusion (with a convolutional U-net to predict noise to subtract) 
       the model starts with Gaussian noise and slowly transforms it into a viable climb. 
       Finally, the model moves from a continuous space to discrete holds
       by taking the max channel for every hole in the fully denoised sample.</p>
 
     <h3>What about 1.0?</h3>
-    <p>setter1.0 was a friend and I's first attempt at the problem of generating Kilter board climbs, and used seq2seq transformer architecture similar to
+    <p>setter1.0 was a friend and I's first attempt at the problem of generating Kilter Board climbs, and used seq2seq transformer architecture similar to
       in NLP (represent each hold as a word, and then build a sentence. The finished product is your climb!) Unfortunately, this approach had a few weaknesses:
       first, climbs do not have an inherent sequence in the same way that sentences do, and so choosing an arbitrary ordering of holds created undesirable biases in the model. 
       Second, transformers are built to find the "correct" next token, meaning a set grade and angle parameter pair would always generate the same climb. Introducing 
@@ -124,23 +124,23 @@
       climb generation as my problem because I was already fairly familiar with it. That said, I quickly realized that diffusion has a lot of useful properties for this type of problem. 
       Perhaps most obviously, diffusion can work in a 2 dimensional space (as it does for image generation), allowing for the model to understand the spatial positioning of climbs in the same way that humans do. 
       Additionally, as diffusion fundamentally works to transform random Gaussian noise into the target space, the setter1.0 issue of needing to add quality-destroying temperature doesn't exist: 
-      there is no temperature needed because it is <i>all<i> temperature.
+      there is no temperature needed because it is <i>all</i> temperature.
     </p>
 
     <h3>Reading the visualizer</h3>
     <p><strong>Predicted climb</strong> shows what the model currently predicts to be the denoised climb. In early time-steps, this is often an empty board, as the model has not yet ramped up the hold role values in any cells.
       <strong>Confidence</strong> shades each hole by how strongly the model leans toward a hold there. Again, in early time-steps, this is often empty.
-      <strong>Relative confidence</strong> compares each hole with the most likely hold on the entire board, showing where the model starts leaning early on.
+      <strong>Relative confidence</strong> compares each hole with the most likely hold on the entire board right now, showing where the model starts leaning early on. Early leanings often change.
       <strong>Noisy sample</strong> shows the actual noise the model is transforming into the final climb.</p>
 
     <h3>Limitations</h3>
-    <p>None of the generated climbs have been tested on a real Kilter board, so grades may be inaccurate. Additionally, by nature of diffusion, some seeds 
+    <p>As there are less database climbs near the end ranges of the parameters (near 0 degrees, 70 degrees, V13, etc), those climbs are often of worse quality. Futhermore, none of the generated climbs have been tested on a real Kilter Board, so grades may be inaccurate. Additionally, by nature of diffusion, some seeds 
       will begin with noise and further add noise that, in conjunction, will cause structural errors to occur (e.g. 3 start/finish holds; as cells decide their roles in parallel, sometimes multiple can simultaneously gain a role before the model "realizes"). 
-      If this happens, sorry, and please try a different seed!
+      If this happens, and please try a different seed! 
     </p>
 
     <h3>Who am I?</h3>
-    <p>Hi! I'm Sean Murthy, an Electrical and Computer Engineering undergraduate at Cornell University. If you have any questions or want to get in touch, email me at seaneverestmurthy@gmail.com!</p>
+    <p>Hi! I'm Sean Murthy, an Electrical and Computer Engineering undergraduate at Cornell University. If you have any questions or want to get in touch, email me at <a href="mailto:seaneverestmurthy@gmail.com">seaneverestmurthy@gmail.com</a>!</p>
   </section>
 
   <footer class="foot">
