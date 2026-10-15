@@ -105,11 +105,12 @@
     <h2 id="how-title">About</h2>
 
     <h3>What is setter2.0?</h3>
-    <p>setter2.0 is a DDIM model trained/tested on a dataset of about 80,000 public Kilter Board climbs, all with 2 or more ascents, right now for 700 epochs. 
-      The model spatially encodes climbs in a grid format, with each cell containing 5 channels (empty, start, hand, foot, finish). Then, using reverse-step diffusion (with a convolutional U-net to predict noise to subtract) 
+    <p>setter2.0 is a DDIM model trained/tested on a dataset of about 80,000 public Kilter Board climbs, all with 2 or more ascents, which right now has been trained for 700 epochs. 
+      The model spatially encodes climbs in a grid format, with each hold corresponding to a cell containing 5 channels (empty, start, hand, foot, finish). Similarly, the conditions (angle and grade) are embedded with a linear MLP. 
+      Then, using reverse-step diffusion (with a convolutional U-net to predict noise to subtract) 
       the model starts with Gaussian noise and slowly transforms it into a viable climb. 
       Finally, the model moves from a continuous space to discrete holds
-      by taking the max channel for every hole in the fully denoised sample.</p>
+      by taking the max channel for every cell in the fully denoised sample.</p>
 
     <h3>What about 1.0?</h3>
     <p>setter1.0 was a friend and I's first attempt at the problem of generating Kilter Board climbs. We used seq2seq transformer architecture similar to
@@ -119,12 +120,12 @@
       temperature (randomness) solved this issue, but vastly decreased the quality of generated climbs.
     </p>
 
-    <h3>Why Diffusion?</h3>
+    <h3>Why diffusion?</h3>
     <p>I initially started setter2.0 for the express purpose of learning to write a DDPM in the first place; I frankly didn't expect any success other than my own learning, and chose Kilter board 
       climb generation as my problem because I was already fairly familiar with it. That said, I quickly realized that diffusion has a lot of useful properties for this type of problem. 
       Perhaps most obviously, diffusion can work in a 2 dimensional space (as it does for image generation), allowing for the model to understand the spatial positioning of climbs in the same way that humans do. 
       Additionally, as diffusion fundamentally works to transform random Gaussian noise into the target space, the setter1.0 issue of needing to add quality-destroying temperature doesn't exist: 
-      no external temperature needed because it is <i>all</i> temperature.
+      no external temperature is needed because it is <i>all</i> temperature.
     </p>
 
     <h3>Reading the visualizer</h3>
