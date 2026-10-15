@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Setter: AI Kilter Board Climbs</title>
+  <meta name="description" content="Generate Kilter Board climbs with a diffusion model that runs in your browser, and watch each climb take shape step by step.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>setter2.0</h1>
+    <p class="tagline">AI-generated Kilter Board climbs. The model runs entirely in your browser.</p>
+  </header>
+
+  <main class="layout">
+    <section class="panel controls" aria-label="Climb settings">
+      <h2>Climb</h2>
+      <label class="field">
+        <span class="label-row"><span>Grade</span></span>
+        <select id="grade"></select>
+      </label>
+      <label class="field">
+        <span class="label-row"><span>Wall angle</span><output id="angle-out">40°</output></span>
+        <input id="angle" type="range" min="0" max="70" step="5" value="40">
+      </label>
+      <label class="field">
+        <span class="label-row"><span>Seed</span></span>
+        <span class="seed-row">
+          <input id="seed" type="number" min="0" max="999999" step="1" value="1">
+          <button id="dice" class="icon-btn" type="button" title="Random seed" aria-label="Random seed">⚄</button>
+        </span>
+      </label>
+
+      <details class="advanced">
+        <summary>Advanced</summary>
+        <label class="field">
+          <span class="label-row"><span>Denoising steps</span><output id="steps-out">50</output></span>
+          <input id="steps" type="range" min="10" max="100" step="5" value="50">
+        </label>
+        <label class="field">
+          <span class="label-row"><span>Randomness (eta)</span><output id="eta-out">1.0</output></span>
+          <input id="eta" type="range" min="0" max="1" step="0.1" value="1">
+        </label>
+        <label class="field">
+          <span class="label-row"><span>Guidance</span><output id="guidance-out">0.0</output></span>
+          <input id="guidance" type="range" min="0" max="4" step="0.5" value="2">
+        </label>
+        <p class="hint">Guidance makes climbs follow the grade and angle more strictly, but sometimes can create structural issues (e.g. 3 start holds, no finish, etc).</p>
+      </details>
+
+      <button id="generate" class="primary" type="button" disabled>Loading model…</button>
+      <div class="progress" aria-hidden="true"><div id="bar"></div></div>
+      <p id="status" class="status" role="status">Starting…</p>
+    </section>
+
+    <section class="panel viewer" aria-label="Board">
+      <div class="view-tabs" role="tablist" aria-label="What to show">
+        <button class="tab active" type="button" data-view="prediction" role="tab" aria-selected="true">Predicted climb</button>
+        <button class="tab" type="button" data-view="confidence" role="tab" aria-selected="false">Confidence</button>
+        <button class="tab" type="button" data-view="relative" role="tab" aria-selected="false">Relative confidence</button>
+        <button class="tab" type="button" data-view="noisy" role="tab" aria-selected="false">Noisy sample</button>
+      </div>
+      <div class="board-wrap">
+        <canvas id="board" aria-label="Kilter board with the generated climb"></canvas>
+      </div>
+      <div class="timeline">
+        <button id="play" class="icon-btn" type="button" aria-label="Play" disabled>▶</button>
+        <input id="step" type="range" min="1" max="1" value="1" disabled aria-label="Denoising step">
+        <span id="step-label" class="step-label">step –</span>
+      </div>
+      <p id="view-help" class="hint view-help"></p>
+      <div class="legend" aria-label="Hold roles">
+        <span><i style="--c:#00DD00"></i>Start</span>
+        <span><i style="--c:#00FFFF"></i>Hand</span>
+        <span><i style="--c:#FF00FF"></i>Finish</span>
+        <span><i style="--c:#FFA500"></i>Foot</span>
+      </div>
+    </section>
+
+    <section class="panel details" aria-label="Climb details">
+      <h2>Result</h2>
+      <p id="summary" class="summary">Generate a climb to see it here.</p>
+      <div class="detail-actions">
+        <button id="copy-link" type="button" disabled>Copy link</button>
+        <button id="copy-frames" type="button" disabled>Copy frames</button>
+        <button id="download" type="button" disabled>Download image</button>
+      </div>
+      <p class="hint">The same settings and seed always give the same climb on the same device.</p>
+    </section>
+  </main>
+
+  <!--
+    HOW IT WORKS: edit the text below freely.
+    - <h3>...</h3> is a small heading, <p>...</p> is a paragraph.
+    - Links:      <a href="https://example.com">link text</a>
+    - Bold/italic: <strong>bold</strong>, <em>italic</em>
+    - Lists:      <ul><li>first item</li><li>second item</li></ul>
+    To add a section, copy one <h3> plus its <p> and change the words. To remove one, delete both.
+  -->
+  <section class="panel how" aria-labelledby="how-title">
+    <h2 id="how-title">About</h2>
+
+    <h3>What is setter2.0?</h3>
+    <p>setter2.0 is a DDIM model trained/tested on a dataset of about 80,000 public Kilter board climbs, all with 2 or more ascents, right now for 700 epochs. 
+      The model spatially encodes climbs in a grid format, with each cell containing 5 channels (empty, start, hand, foot, finish). Then, using reverse-step diffusion (with a convolutional U-net to predict noise to subtract) 
+      the model starts with Gaussian noise and slowly transforms it into a viable climb. 
+      Finally, the model moves from a continuous space to discrete holds
+      by taking the max channel for every hole in the fully denoised sample.</p>
+
+    <h3>What about 1.0?</h3>
+    <p>setter1.0 was a friend and I's first attempt at the problem of generating Kilter board climbs, and used seq2seq transformer architecture similar to
+      in NLP (represent each hold as a word, and then build a sentence. The finished product is your climb!) Unfortunately, this approach had a few weaknesses:
+      first, climbs do not have an inherent sequence in the same way that sentences do, and so choosing an arbitrary ordering of holds created undesirable biases in the model. 
+      Second, transformers are built to find the "correct" next token, meaning a set grade and angle parameter pair would always generate the same climb. Introducing 
+      temperature (randomness) solved this issue, but vastly decreased the quality of generated climbs.
+    </p>
+
+    <h3>Why Diffusion?</h3>
+    <p>I initially started setter2.0 for the express purpose of learning to write a DDPM in the first place; I frankly didn't expect any success other than my own learning, and chose Kilter board 
+      climb generation as my problem because I was already fairly familiar with it. That said, I quickly realized that diffusion has a lot of useful properties for this type of problem. 
+      Perhaps most obviously, diffusion can work in a 2 dimensional space (as it does for image generation), allowing for the model to understand the spatial positioning of climbs in the same way that humans do. 
+      Additionally, as diffusion fundamentally works to transform random Gaussian noise into the target space, the setter1.0 issue of needing to add quality-destroying temperature doesn't exist: 
+      there is no temperature needed because it is <i>all<i> temperature.
+    </p>
+
+    <h3>Reading the visualizer</h3>
+    <p><strong>Predicted climb</strong> shows what the model currently predicts to be the denoised climb. In early time-steps, this is often an empty board, as the model has not yet ramped up the hold role values in any cells.
+      <strong>Confidence</strong> shades each hole by how strongly the model leans toward a hold there. Again, in early time-steps, this is often empty.
+      <strong>Relative confidence</strong> compares each hole with the most likely hold on the entire board, showing where the model starts leaning early on.
+      <strong>Noisy sample</strong> shows the actual noise the model is transforming into the final climb.</p>
+
+    <h3>Limitations</h3>
+    <p>None of the generated climbs have been tested on a real Kilter board, so grades may be inaccurate. Additionally, by nature of diffusion, some seeds 
+      will begin with noise and further add noise that, in conjunction, will cause structural errors to occur (e.g. 3 start/finish holds; as cells decide their roles in parallel, sometimes multiple can simultaneously gain a role before the model "realizes"). 
+      If this happens, sorry, and please try a different seed!
+    </p>
+
+    <h3>About</h3>
+    <p>Hi! I'm Sean Murthy, an Electrical and Computer Engineering undergraduate at Cornell University. If you have any questions or want to get in touch, email me at seaneverestmurthy@gmail.com!</p>
+  </section>
+
+  <footer class="foot">
+    <p>Climbs are generated by a diffusion model trained on public Kilter Board climbs. Not affiliated with Aurora Climbing or Kilter. Board images © Aurora Climbing.</p>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
