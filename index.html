@@ -13,7 +13,7 @@
 <body>
   <header class="top">
     <h1>setter2.0</h1>
-    <p class="tagline">AI-generated Kilter Board climbs. The model runs entirely in your browser.</p>
+    <p class="tagline">AI-generated Kilter Board climbs. The model runs entirely in your browser. Matching is always allowed!</p>
   </header>
 
   <main class="layout">
@@ -112,8 +112,8 @@
       by taking the max channel for every hole in the fully denoised sample.</p>
 
     <h3>What about 1.0?</h3>
-    <p>setter1.0 was a friend and I's first attempt at the problem of generating Kilter Board climbs, and used seq2seq transformer architecture similar to
-      in NLP (represent each hold as a word, and then build a sentence. The finished product is your climb!) Unfortunately, this approach had a few weaknesses:
+    <p>setter1.0 was a friend and I's first attempt at the problem of generating Kilter Board climbs. We used seq2seq transformer architecture similar to
+      in NLP (represent each hold as a word, and then build a sentence. The finished product is your climb!). Unfortunately, this approach had a few weaknesses:
       first, climbs do not have an inherent sequence in the same way that sentences do, and so choosing an arbitrary ordering of holds created undesirable biases in the model. 
       Second, transformers are built to find the "correct" next token, meaning a set grade and angle parameter pair would always generate the same climb. Introducing 
       temperature (randomness) solved this issue, but vastly decreased the quality of generated climbs.
@@ -124,7 +124,7 @@
       climb generation as my problem because I was already fairly familiar with it. That said, I quickly realized that diffusion has a lot of useful properties for this type of problem. 
       Perhaps most obviously, diffusion can work in a 2 dimensional space (as it does for image generation), allowing for the model to understand the spatial positioning of climbs in the same way that humans do. 
       Additionally, as diffusion fundamentally works to transform random Gaussian noise into the target space, the setter1.0 issue of needing to add quality-destroying temperature doesn't exist: 
-      there is no temperature needed because it is <i>all</i> temperature.
+      no external temperature needed because it is <i>all</i> temperature.
     </p>
 
     <h3>Reading the visualizer</h3>
@@ -140,7 +140,7 @@
     </p>
 
     <h3>Who am I?</h3>
-    <p>Hi! I'm Sean Murthy, an Electrical and Computer Engineering undergraduate at Cornell University. If you have any questions or want to get in touch, email me at <a href="mailto:seaneverestmurthy@gmail.com">seaneverestmurthy@gmail.com</a>!</p>
+    <p>Hi! I'm Sean Murthy, an electrical and computer engineering undergraduate at Cornell University. If you have any questions or want to get in touch, email me at <a href="mailto:seaneverestmurthy@gmail.com">seaneverestmurthy@gmail.com</a>!</p>
   </section>
 
   <footer class="foot">
