@@ -9,6 +9,9 @@
   --muted: #85847c;
   --accent: #3987e5;
   --accent-text: #ffffff;
+  --play: #e5484d;
+  --play-hover: #f05b60;
+  --play-glow: rgba(229, 72, 77, 0.55);
   --radius: 12px;
   /* code-editor font everywhere; falls back to the system's own monospace font if Google Fonts can't load */
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
@@ -87,6 +90,25 @@ button:disabled { opacity: 0.5; cursor: default; }
 button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .icon-btn { min-width: 40px; font-size: 18px; line-height: 1; padding: 8px 10px; }
+
+/* play button after a climb finishes: red, slightly larger, with a pulsing ring, until it's pressed */
+#play { transition: background-color 200ms, border-color 200ms, transform 200ms; }
+#play.ready {
+  background: var(--play);
+  border-color: var(--play);
+  color: #fff;
+  transform: scale(1.15);
+  animation: play-pulse 1.6s ease-out infinite;
+}
+#play.ready:hover { background: var(--play-hover); border-color: var(--play-hover); }
+@keyframes play-pulse {
+  0%   { box-shadow: 0 0 0 0 var(--play-glow); }
+  70%  { box-shadow: 0 0 0 12px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #play.ready { animation: none; box-shadow: 0 0 0 3px var(--play-glow); }
+}
 
 .primary {
   width: 100%;

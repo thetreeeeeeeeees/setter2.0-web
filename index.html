@@ -105,8 +105,8 @@
     <h2 id="how-title">About</h2>
 
     <h3>What is setter2.0?</h3>
-    <p>setter2.0 is a DDIM model trained/tested on a dataset of about 80,000 public Kilter Board climbs, all with 2 or more ascents, which right now has been trained for 700 epochs. 
-      The model spatially encodes climbs in a grid format, with each hold corresponding to a cell containing 5 channels (empty, start, hand, foot, finish). Similarly, the conditions (angle and grade) are embedded with a linear MLP. 
+    <p>setter2.0 is a DDIM model trained/tested on a dataset of about 80,000 public Kilter Board climbs, all with 2 or more ascents, which currently has run a 700 epoch training cycle. 
+      The model spatially encodes climbs in a grid format, with each hole corresponding to a cell containing 5 channels (empty, start, hand, foot, finish). Similarly, the conditions (angle and grade) are embedded with a linear MLP. 
       Then, using reverse-step diffusion (with a convolutional U-net to predict noise to subtract) 
       the model starts with Gaussian noise and slowly transforms it into a viable climb. 
       Finally, the model moves from a continuous space to discrete holds
@@ -130,7 +130,7 @@
 
     <h3>Reading the visualizer</h3>
     <p><strong>Predicted climb</strong> shows what the model currently predicts to be the denoised climb. In early time-steps, this is often an empty board, as the model has not yet ramped up the hold values in any cells.
-      <strong>Confidence</strong> shades each hole by how strongly the model predicst a hold there after the full denoising process. Again, in early time-steps, this is often empty.
+      <strong>Confidence</strong> shades each hole by how strongly the model predicts a hold there after the full denoising process. Again, in early time-steps, this is often empty.
       <strong>Relative confidence</strong> compares the predicted post-denoising value for each hole against the predicted post-denoising value of the most likely hold on the entire board. Helpful for showing where the model starts leaning early on. Early leanings often change.
       <strong>Noisy sample</strong> shows the actual noise the model is transforming into the final climb.</p>
 

@@ -255,7 +255,12 @@ function stopPlaying() {
   els.play.setAttribute("aria-label", "Play");
 }
 
+function setPlayHighlight(on) {        // red, pulsing play button after a climb finishes, until it's used
+  els.play.classList.toggle("ready", on);
+}
+
 function togglePlay() {
+  setPlayHighlight(false);
   if (playTimer) return stopPlaying();
   if (shown >= run.snapshots.length - 1) showStep(FIRST_SHOWN);
   els.play.textContent = "❚❚";
@@ -283,6 +288,7 @@ function summarize(holds) {
 async function generate() {
   if (busy) { cancel = true; return; }
   stopPlaying();
+  setPlayHighlight(false);
   busy = true;
   cancel = false;
   const settings = settingsFromUI();
@@ -311,6 +317,7 @@ async function generate() {
       run.holds = decode(snapshots[snapshots.length - 1].x0);
       summarize(run.holds);
       setStatus("Done! Drag the slider or press play to watch the climb form.", 1);
+      setPlayHighlight(true);
       [els.copyLink, els.copyFrames, els.download].forEach((b) => (b.disabled = false));
     }
   } catch (err) {
@@ -425,7 +432,7 @@ async function init() {
 [els.angle, els.steps, els.eta, els.guidance].forEach((el) => el.addEventListener("input", syncOutputs));
 els.dice.addEventListener("click", () => { els.seed.value = String(Math.floor(Math.random() * 1e6)); });
 els.generate.addEventListener("click", generate);
-els.step.addEventListener("input", () => { stopPlaying(); showStep(Number(els.step.value)); });
+els.step.addEventListener("input", () => { setPlayHighlight(false); stopPlaying(); showStep(Number(els.step.value)); });
 els.play.addEventListener("click", togglePlay);
 els.copyLink.addEventListener("click", () => copy(shareURL(), els.copyLink));
 els.copyFrames.addEventListener("click", () => copy(framesString(run.holds), els.copyFrames));
