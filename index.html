@@ -129,9 +129,9 @@
     </p>
 
     <h3>Reading the visualizer</h3>
-    <p><strong>Predicted climb</strong> shows what the model currently predicts to be the denoised climb. In early time-steps, this is often an empty board, as the model has not yet ramped up the hold role values in any cells.
-      <strong>Confidence</strong> shades each hole by how strongly the model leans toward a hold there. Again, in early time-steps, this is often empty.
-      <strong>Relative confidence</strong> compares each hole with the most likely hold on the entire board right now, showing where the model starts leaning early on. Early leanings often change.
+    <p><strong>Predicted climb</strong> shows what the model currently predicts to be the denoised climb. In early time-steps, this is often an empty board, as the model has not yet ramped up the hold values in any cells.
+      <strong>Confidence</strong> shades each hole by how strongly the model predicst a hold there after the full denoising process. Again, in early time-steps, this is often empty.
+      <strong>Relative confidence</strong> compares the predicted post-denoising value for each hole against the predicted post-denoising value of the most likely hold on the entire board. Helpful for showing where the model starts leaning early on. Early leanings often change.
       <strong>Noisy sample</strong> shows the actual noise the model is transforming into the final climb.</p>
 
     <h3>Limitations</h3>
