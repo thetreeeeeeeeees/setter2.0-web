@@ -34,7 +34,8 @@ let image = null;      // board.jpg
 let session = null;    // ONNX Runtime session
 let backend = "";
 let backendKind = "";  // "webgpu" or "wasm"
-let simulateFailureAt = 0;   // testing only: make the n-th model call fail as if the GPU had been lost
+let gpuLost = false;   // the GPU disconnected; ONNX Runtime can't use it again until the page is reloaded
+let simulateFailureAt = 0;   // testing only: make the n-th model call fail as if the GPU had disconnected
 let run = null;        // the latest generation: { settings, snapshots: [{ t, x0, xt }], holds }
 let view = "noisy";           // the tab shown when the page opens (must match the "active" tab in index.html)
 let shown = 0;         // which step the board shows
@@ -223,7 +224,7 @@ function showStep(k) {
 
 // ---------- UI ----------
 
-function yieldToBrowser() {           // lets the page repaint and handle clicks; unlike requestAnimationFrame,
+function yieldToBrowser() {           // lets the page handle clicks; unlike requestAnimationFrame,
   return new Promise((resolve) => {   // this keeps running when the tab is in the background
     const channel = new MessageChannel();
     channel.port1.onmessage = () => resolve();
@@ -288,14 +289,14 @@ function summarize(holds) {
   els.summary.innerHTML = html;
 }
 
-async function generate(retrySettings = null) {
+async function generate() {
+  if (gpuLost) { location.reload(); return; }        // the button reads "Reload page" after a GPU disconnect
   if (busy) { cancel = true; return; }
   stopPlaying();
   setPlayHighlight(false);
   busy = true;
   cancel = false;
-  const settings = retrySettings ?? settingsFromUI();
-  let switchToCPU = false;
+  const settings = settingsFromUI();
   const started = performance.now();
   run = { settings, snapshots: [], total: settings.steps, holds: [], seconds: 0 };
   shown = FIRST_SHOWN;
@@ -326,34 +327,29 @@ async function generate(retrySettings = null) {
     }
   } catch (err) {
     console.error(err);
-    // Phones (iOS Safari especially) can take the GPU away mid-run, e.g. while zooming; after that the GPU
-    // session can't be used again. Switch to the CPU once and redo the same climb (same settings and seed).
-    if (backendKind === "webgpu") switchToCPU = true;
-    else setStatus(`Something went wrong: ${err.message}`, 0);
-  } finally {
-    busy = false;
-    els.generate.textContent = "Generate climb";
-    els.step.disabled = els.play.disabled = run.snapshots.length <= FIRST_SHOWN;
-  }
-  if (switchToCPU) {
-    els.generate.disabled = true;
-    try {
-      setStatus("The GPU stopped responding. Switching to the CPU and starting this climb again…", 0);
-      await session.release().catch(() => {});
-      await startModel(["wasm"]);
-      els.generate.disabled = false;
-      generate(settings);
-    } catch (err) {
-      console.error(err);
+    if (backendKind === "webgpu") {
+      // Phones (iOS Safari especially) can take the GPU away mid-run, e.g. while zooming or switching apps.
+      // ONNX Runtime can't reconnect to it without a fresh page, so ask for a reload.
+      gpuLost = true;
+      setStatus("The GPU disconnected. This can happen on phones when zooming in or switching apps. " +
+                "Please reload the page to keep generating climbs.", 0);
+    } else {
       setStatus(`Something went wrong: ${err.message}`, 0);
     }
+  } finally {
+    busy = false;
+    els.generate.textContent = gpuLost ? "Reload page" : "Generate climb";
+    els.step.disabled = els.play.disabled = run.snapshots.length <= FIRST_SHOWN;
   }
 }
 
-function shareURL() {
-  const s = run.settings;
+function settingsURL(s) {
   const params = new URLSearchParams({ grade: s.difficulty, angle: s.angle, seed: s.seed, steps: s.steps, eta: s.eta, guidance: s.guidance });
   return `${location.origin}${location.pathname}?${params}`;
+}
+
+function shareURL() {
+  return settingsURL(run.settings);
 }
 
 async function copy(text, button) {
