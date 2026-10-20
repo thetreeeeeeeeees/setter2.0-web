@@ -168,6 +168,8 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
   }
   .top { padding: 20px 16px 4px; }
   .how { width: calc(100% - 32px); margin-bottom: 20px; }
+  /* iOS Safari zooms the whole page when a text box under 16px is tapped; keep form fields at 16px on phones */
+  select, input[type="number"] { font-size: 16px; }
   .foot { padding: 0 16px 24px; }
   .step-label { min-width: 0; }
 }

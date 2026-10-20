@@ -356,20 +356,33 @@ function applyURLParams() {
   return p.has("seed");
 }
 
-async function fetchWithProgress(url, onProgress) {
+async function fetchWithProgress(url, onProgress, expectedBytes = 0) {
+  // Memory matters here: iOS Safari kills tabs that use too much (pinch-zooming adds more on top), so when the
+  // file size is known the download goes straight into one buffer instead of pieces that are copied together.
   const res = await fetch(url);
   if (!res.ok) throw new Error(`couldn't download ${url} (${res.status})`);
-  const total = Number(res.headers.get("Content-Length")) || 0;
+  // the real file size: from board.json if given (GitHub Pages compresses the model, so its Content-Length is
+  // the compressed size), otherwise from the server when it isn't compressing
+  const announced = res.headers.get("Content-Encoding") ? 0 : Number(res.headers.get("Content-Length")) || 0;
+  const total = expectedBytes || announced;
+  const exact = total > 0;
   const reader = res.body.getReader();
-  const chunks = [];
+  let buffer = exact ? new Uint8Array(total) : null;
+  let chunks = exact ? null : [];
   let received = 0;
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
-    chunks.push(value);
+    if (buffer && received + value.length > buffer.length) {   // bigger than announced: fall back to pieces
+      chunks = [buffer.subarray(0, received)];
+      buffer = null;
+    }
+    if (buffer) buffer.set(value, received);
+    else chunks.push(value);
     received += value.length;
     onProgress(received, total);
   }
+  if (buffer) return received === buffer.length ? buffer : buffer.subarray(0, received);
   const bytes = new Uint8Array(received);
   let offset = 0;
   for (const c of chunks) { bytes.set(c, offset); offset += c.length; }
@@ -383,7 +396,7 @@ async function createSession(bytes) {
   const { channels: C, height: H, width: W } = board.grid;
   for (const ep of order) {
     try {
-      const s = await ort.InferenceSession.create(bytes.slice(), { executionProviders: [ep] });
+      const s = await ort.InferenceSession.create(bytes, { executionProviders: [ep] });   // no extra copy
       // one test run: catches backends that load but can't run the model, and warms up the GPU
       await s.run({
         x: new ort.Tensor("float32", new Float32Array(C * H * W), [1, C, H, W]),
@@ -417,11 +430,12 @@ async function init() {
   document.querySelectorAll(".legend i").forEach((el, k) => el.style.setProperty("--c", board.roles[k + 1].color));
   const autoRun = applyURLParams();
 
-  const bytes = await fetchWithProgress("assets/model.onnx", (got, total) =>
+  let bytes = await fetchWithProgress("assets/model.onnx", (got, total) =>
     setStatus(`Downloading model… ${(got / 1e6).toFixed(0)}${total ? ` of ${(total / 1e6).toFixed(0)}` : ""} MB`,
-              total ? got / total : 0));
+              total ? got / total : 0), board.model_bytes);
   setStatus("Starting the model…", 1);
   ({ session, backend } = await createSession(bytes));
+  bytes = null;                                      // ONNX Runtime has its own copy now; let the browser free this one
   setStatus(`Ready. Running on ${backend}.`, 0);
   els.generate.disabled = false;
   els.generate.textContent = "Generate climb";
