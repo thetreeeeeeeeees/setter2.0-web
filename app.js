@@ -33,6 +33,8 @@ let board = null;      // board.json
 let image = null;      // board.jpg
 let session = null;    // ONNX Runtime session
 let backend = "";
+let backendKind = "";  // "webgpu" or "wasm"
+let simulateFailureAt = 0;   // testing only: make the n-th model call fail as if the GPU had been lost
 let run = null;        // the latest generation: { settings, snapshots: [{ t, x0, xt }], holds }
 let view = "noisy";           // the tab shown when the page opens (must match the "active" tab in index.html)
 let shown = 0;         // which step the board shows
@@ -88,6 +90,7 @@ async function predictNoise(x, t, cond, guidance) {
   const xs = new Float32Array(B * N);
   xs.set(x);
   if (B === 2) xs.set(x, N);
+  if (simulateFailureAt > 0 && --simulateFailureAt === 0) throw new Error("simulated GPU failure (testing)");
   const out = await session.run({
     x: new ort.Tensor("float32", xs, [B, C, H, W]),
     t: new ort.Tensor("float32", new Float32Array(B).fill(t), [B]),
@@ -285,13 +288,14 @@ function summarize(holds) {
   els.summary.innerHTML = html;
 }
 
-async function generate() {
+async function generate(retrySettings = null) {
   if (busy) { cancel = true; return; }
   stopPlaying();
   setPlayHighlight(false);
   busy = true;
   cancel = false;
-  const settings = settingsFromUI();
+  const settings = retrySettings ?? settingsFromUI();
+  let switchToCPU = false;
   const started = performance.now();
   run = { settings, snapshots: [], total: settings.steps, holds: [], seconds: 0 };
   shown = FIRST_SHOWN;
@@ -322,11 +326,27 @@ async function generate() {
     }
   } catch (err) {
     console.error(err);
-    setStatus(`Something went wrong: ${err.message}`, 0);
+    // Phones (iOS Safari especially) can take the GPU away mid-run, e.g. while zooming; after that the GPU
+    // session can't be used again. Switch to the CPU once and redo the same climb (same settings and seed).
+    if (backendKind === "webgpu") switchToCPU = true;
+    else setStatus(`Something went wrong: ${err.message}`, 0);
   } finally {
     busy = false;
     els.generate.textContent = "Generate climb";
     els.step.disabled = els.play.disabled = run.snapshots.length <= FIRST_SHOWN;
+  }
+  if (switchToCPU) {
+    els.generate.disabled = true;
+    try {
+      setStatus("The GPU stopped responding. Switching to the CPU and starting this climb again…", 0);
+      await session.release().catch(() => {});
+      await startModel(["wasm"]);
+      els.generate.disabled = false;
+      generate(settings);
+    } catch (err) {
+      console.error(err);
+      setStatus(`Something went wrong: ${err.message}`, 0);
+    }
   }
 }
 
@@ -389,10 +409,7 @@ async function fetchWithProgress(url, onProgress, expectedBytes = 0) {
   return bytes;
 }
 
-async function createSession(bytes) {
-  // ?backend=wasm forces the CPU path (the fallback for browsers without WebGPU)
-  const forced = new URLSearchParams(location.search).get("backend");
-  const order = forced ? [forced] : "gpu" in navigator ? ["webgpu", "wasm"] : ["wasm"];
+async function createSession(bytes, order) {
   const { channels: C, height: H, width: W } = board.grid;
   for (const ep of order) {
     try {
@@ -404,12 +421,21 @@ async function createSession(bytes) {
         cond: new ort.Tensor("float32", new Float32Array(2), [1, 2]),
         drop: new ort.Tensor("float32", new Float32Array(1), [1]),
       });
-      return { session: s, backend: ep === "webgpu" ? "your GPU (WebGPU)" : "your CPU (WebAssembly)" };
+      return { session: s, kind: ep, backend: ep === "webgpu" ? "your GPU (WebGPU)" : "your CPU (WebAssembly)" };
     } catch (err) {
       console.warn(`ONNX Runtime backend ${ep} unavailable:`, err);
     }
   }
   throw new Error("this browser couldn't run the model");
+}
+
+async function startModel(order) {     // downloads the model (usually from the browser's cache after the first time)
+  let bytes = await fetchWithProgress("assets/model.onnx", (got, total) =>
+    setStatus(`Downloading model… ${(got / 1e6).toFixed(0)}${total ? ` of ${(total / 1e6).toFixed(0)}` : ""} MB`,
+              total ? got / total : 0), board.model_bytes);
+  setStatus("Starting the model…", 1);
+  ({ session, backend, kind: backendKind } = await createSession(bytes, order));
+  bytes = null;                                      // ONNX Runtime has its own copy now; let the browser free this one
 }
 
 async function init() {
@@ -430,12 +456,9 @@ async function init() {
   document.querySelectorAll(".legend i").forEach((el, k) => el.style.setProperty("--c", board.roles[k + 1].color));
   const autoRun = applyURLParams();
 
-  let bytes = await fetchWithProgress("assets/model.onnx", (got, total) =>
-    setStatus(`Downloading model… ${(got / 1e6).toFixed(0)}${total ? ` of ${(total / 1e6).toFixed(0)}` : ""} MB`,
-              total ? got / total : 0), board.model_bytes);
-  setStatus("Starting the model…", 1);
-  ({ session, backend } = await createSession(bytes));
-  bytes = null;                                      // ONNX Runtime has its own copy now; let the browser free this one
+  // ?backend=wasm forces the CPU path (the fallback for browsers without WebGPU)
+  const forced = new URLSearchParams(location.search).get("backend");
+  await startModel(forced ? [forced] : "gpu" in navigator ? ["webgpu", "wasm"] : ["wasm"]);
   setStatus(`Ready. Running on ${backend}.`, 0);
   els.generate.disabled = false;
   els.generate.textContent = "Generate climb";
@@ -445,7 +468,7 @@ async function init() {
 // events
 [els.angle, els.steps, els.eta, els.guidance].forEach((el) => el.addEventListener("input", syncOutputs));
 els.dice.addEventListener("click", () => { els.seed.value = String(Math.floor(Math.random() * 1e6)); });
-els.generate.addEventListener("click", generate);
+els.generate.addEventListener("click", () => generate());
 els.step.addEventListener("input", () => { setPlayHighlight(false); stopPlaying(); showStep(Number(els.step.value)); });
 els.play.addEventListener("click", togglePlay);
 els.copyLink.addEventListener("click", () => copy(shareURL(), els.copyLink));
@@ -467,7 +490,8 @@ document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click",
 }));
 els.viewHelp.textContent = VIEW_HELP[view];
 
-window.setter = { sample, decode, timesteps, get board() { return board; } };   // for testing from the console
+window.setter = { sample, decode, timesteps, get board() { return board; }, get backend() { return backendKind; },
+                  simulateFailure(n) { simulateFailureAt = n; } };   // for testing from the console
 
 init().catch((err) => {
   console.error(err);
