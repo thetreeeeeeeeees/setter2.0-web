@@ -105,7 +105,7 @@
     <h2 id="how-title">About</h2>
 
     <h3>What is setter2.0?</h3>
-    <p>setter2.0 is a DDIM model trained/tested on a dataset of about 80,000 public Kilter Board climbs, all with 2 or more ascents, which currently has run a 700 epoch training cycle. 
+    <p>setter2.0 is a DDIM model trained/tested on a dataset of about 80,000 public Kilter Board climbs, all with 2 or more ascents, which currently has run a 1400 epoch training cycle (1200 steady epochs and 200 epochs with a decaying learning rate). 
       The model spatially encodes climbs in a grid format, with each hole corresponding to a cell containing 5 channels (empty, start, hand, foot, finish). Similarly, the conditions (angle and grade) are embedded with a linear MLP. 
       Then, using reverse-step diffusion (with a convolutional U-net to predict noise to subtract) 
       the model starts with Gaussian noise and slowly transforms it into a viable climb. 
